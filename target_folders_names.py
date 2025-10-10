@@ -1,0 +1,1 @@
+target_folders_names_list = ["Acuerdo de Cobertura", "Consentimientos Informados", "Seguimiento a Estudiantes", "Evidencias Fotográficas", "Listado Asistencia", "Registro Didáctico"]
