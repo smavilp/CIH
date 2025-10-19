@@ -24,12 +24,21 @@ def create_nested_lists(sheets_service, sheet_id, cell_range="A:Z"):
     tree_map = {}
 
     for r in rows:
+        if r[idx_dep] != "Sucre": # Aquí se filtra por departamento
+            continue
+
         # Saltar filas incompletas
         if len(r) <= max(idx_dep, idx_mun, idx_est):
             continue
-        dep = r[idx_dep].strip()
-        mun = r[idx_mun].strip()
-        est = r[idx_est].strip()
+
+        if r[idx_dep] == "Sucre": # Aquí se filtra por departamento
+            print(f"Fila Sucre detectada: {r}")
+            dep = r[idx_dep].strip()
+            mun = r[idx_mun].strip()
+            est = r[idx_est].strip()
+        
+
+
         if not (dep and mun and est):
             continue
 

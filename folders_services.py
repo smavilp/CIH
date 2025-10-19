@@ -1,4 +1,5 @@
 from target_folders_names import target_folders_names_list
+from googleapiclient.errors import HttpError
 
 # Busca carpetas en Google Drive por nombre exacto y devuelve su ID
 def find_folder_by_name(drive_service, folder_name: str, parent_id=None):
@@ -45,31 +46,46 @@ def create_folder(drive_service, folder_name: str, parent_id=None):
 
 # Busca un grupo de carpeta según sus nombres
 
-def get_folders_by_name(drive_service,target_folders_names_list):
+def get_folders_by_name(drive_service, target_folders_names_list):
+    """
+    Busca carpetas por nombre en Google Drive y devuelve una lista con sus IDs y nombres.
+    """
 
     target_folders_list = []
 
     for target_name in target_folders_names_list:
-        folder = drive_service.files().list(
-            q=f"name='{target_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false",
-            spaces='drive',
-            fields='files(id, name)',
-            pageSize=100
-        ).execute()
+        page_token = None
 
-        target_folders_list.extend(folder.get('files', []))
+        while True:
+            response = drive_service.files().list(
+                q=f"name='{target_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false",
+                spaces='drive',
+                fields='nextPageToken, files(id, name)',
+                pageSize=1000,
+                pageToken=page_token
+            ).execute()
 
-        print(f"Carpetas encontradas hasta ahora: {target_folders_list}")
-        
-    
+            # Agregar resultados de esta página
+            target_folders_list.extend(response.get('files', []))
+
+            # Obtener token para la siguiente página
+            page_token = response.get('nextPageToken', None)
+
+            if not page_token:
+                break
+
+        print(f"✅ Carpetas encontradas con nombre '{target_name}': {len(target_folders_list)}")
+
+    print(f"\n📦 Total de carpetas encontradas: {len(target_folders_list)}")
     return target_folders_list
+
 
 # Obtiene la ruta completa de una carpeta dada su ID
 
-def get_folder_path(drive_service, folder_id):
-    print(f"Obteniendo la ruta para la carpeta ID: {folder_id}")
+def get_folder_path(drive_service, folder):
+    #print(f"Obteniendo la ruta para la carpeta ID: {folder['id']}")
     path = []
-    current_id = folder_id
+    current_id = folder['id']
 
     while current_id:
         folder = drive_service.files().get(fileId=current_id, fields='id, name, parents', supportsAllDrives=True).execute()
@@ -77,16 +93,40 @@ def get_folder_path(drive_service, folder_id):
         parents = folder.get('parents')
         current_id = parents[0] if parents else None
 
+
     return '/'.join(reversed(path))
 
 # Obtiene las carpetas objetivo con sus rutas completas
 
-def get_target_folders(drive_service, target_folders_names_list,get_folders_by_name,get_folder_path):
+from googleapiclient.errors import HttpError
+import time
+
+def get_target_folders(drive_service, target_folders_names_list, get_folders_by_name, get_folder_path):
+    """
+    Obtiene las carpetas objetivo con su ruta completa.
+    Incluye manejo de errores HTTP para evitar interrupciones si alguna carpeta falla.
+    """
 
     target_folders = get_folders_by_name(drive_service, target_folders_names_list)
 
     for folder in target_folders:
-        folder['path'] = get_folder_path(drive_service, folder['id'])
-        print(f"Carpeta: {folder['name']}, ID: {folder['id']}, Ruta: {folder['path']}")
+        try:
+            folder['path'] = get_folder_path(drive_service, folder)
+            print(f"✅ Carpeta con ruta obtenida: {folder['path']}")
 
+        except HttpError as e:
+            print(f"[WARN] No se pudo obtener path de {folder.get('id')} ({folder.get('name')}): {e}")
+            folder['path'] = None
+            time.sleep(1)  # espera breve antes de continuar con la siguiente
+
+        except Exception as e:
+            print(f"[ERROR] Error inesperado con la carpeta {folder.get('id')} ({folder.get('name')}): {e}")
+            folder['path'] = None
+            continue
+
+    print(f"\n📦 Total de carpetas procesadas: {len(target_folders)}")
     return target_folders
+
+
+
+

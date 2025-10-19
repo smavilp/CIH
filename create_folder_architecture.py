@@ -10,6 +10,9 @@ def create_folder_architecture(drive_service, sheet_service):
 
     nested_lists = create_nested_lists(sheet_service, EE_sheet_id, "A:Z")
 
+    print("Estructura de datos creada a partir de la hoja de cálculo:")
+    print(nested_lists) 
+
     root_folder_id = find_folder_by_name(drive_service, "Centros de Interés")
 
     attendance_students_template = find_sheet_by_name(drive_service, "Formato Listado de Asistencia Estudiantes")
@@ -34,7 +37,8 @@ def create_folder_architecture(drive_service, sheet_service):
                     continue
                 est_id = create_folder(drive_service, est_name, mun_id)
 
-                for subfolder in ["Acuerdo de Cobertura", "Consentimientos Informados","Ficha Centro de Interés","Seguimiento a Estudiantes", "Sesiones Pedagógicas"]:
+                for subfolder in ["Acuerdo de Cobertura","Bitácora", "Consentimientos Informados","Ficha Centro de Interés","Seguimiento a Estudiantes", "Sesiones Pedagógicas"]:
+            
                     subfolder_id = create_folder(drive_service, subfolder, est_id)
 
                     if subfolder == "Seguimiento a Estudiantes":
